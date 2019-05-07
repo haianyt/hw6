@@ -6,6 +6,7 @@ import copy
 from random import gauss
 from shapely.geometry import LineString
 from shapely.geometry import MultiPolygon
+from util import *
 
 
 class Robot:
@@ -49,7 +50,7 @@ class Robot:
     # TODO: Moves a robot
     def move(self, Z):
         # delta_theta = random.random() * 2.0 * pi
-        delta_theta = 0
+        delta_theta = gauss(0, sqrt(self.turn_noise))
         obs_landmarks = []
         for i in range(int(len(Z) / 2)):
             r = Z[2 * i]
@@ -60,10 +61,10 @@ class Robot:
             obs_y = self.y + r * sin(theta_rad)
             obs_landmarks.append((obs_x, obs_y))
         # print(obs_landmarks)
-        obs_obstacles = self.get_obstacles(obs_landmarks)
-        delta_theta = self.detect_collision(delta_theta, obs_obstacles)
-        
-        new_theta = self.theta + delta_theta + gauss(0, sqrt(self.turn_noise))
+        obs_obstacles, edges = self.get_obstacles(obs_landmarks)
+
+        delta_theta = self.detect_collision(delta_theta, obs_obstacles, edges)
+        new_theta = self.theta + delta_theta
         delta_x = 10 * cos(new_theta)
         delta_y = 10 * sin(new_theta)
         new_x = self.x + delta_x + gauss(0, sqrt(self.forward_noise))
@@ -75,30 +76,77 @@ class Robot:
     
     def get_obstacles(self, landmarks):
         obstacles = []
+        # edges = [[(0, 0), (0, 250)], [(0, 0), (250, 0)], [(250, 0), (250, 250)], [(0, 250), (250, 250)]]
+        edges = []
         for l in landmarks:
+            left_bot = (l[0] - self.landmark_size / 2, l[1] - self.landmark_size / 2)
+            left_top = (l[0] - self.landmark_size / 2, l[1] + self.landmark_size / 2)
+            right_bot = (l[0] + self.landmark_size / 2, l[1] - self.landmark_size / 2)
+            right_top = (l[0] + self.landmark_size / 2, l[1] + self.landmark_size / 2)
+            # if self.x > l[0] - self.landmark_size / 2 and self.x < l[0] + self.landmark_size / 2:
+            #     if self.y > l[1] - self.landmark_size / 2 and self.y < l[1] + self.landmark_size / 2:
+            #         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            edges.append([left_bot, left_top])
+            edges.append([left_bot, right_bot])
+            edges.append([right_bot, right_top])
+            edges.append([left_top, right_top])
             obstacle = []
-            obstacle.append((l[0] - self.landmark_size / 2, l[1] - self.landmark_size / 2))
-            obstacle.append((l[0] + self.landmark_size / 2, l[1] - self.landmark_size / 2))
-            obstacle.append((l[0] - self.landmark_size / 2, l[1] + self.landmark_size / 2))
-            obstacle.append((l[0] + self.landmark_size / 2, l[1] + self.landmark_size / 2))
+            obstacle.append(left_bot)
+            obstacle.append(right_bot)
+            obstacle.append(left_top)
+            obstacle.append(right_top)
             obstacles.append([copy.copy(obstacle), []])
-        return obstacles
+        return obstacles, edges
     
-    def detect_collision(self, delta_theta, obs_obstacles):
+    def detect_collision(self, delta_theta, obs_obstacles, edges):
+        stuck = False
         potential_next = (self.x + 10 * cos(self.theta + delta_theta), self.y + 10 * sin(self.theta + delta_theta))
+        potential_line = [(self.x, self.y), potential_next]
+        not_intersect = True
         not_hit_wall = True
-        not_hit_obst = True
+        for e in edges:
+            if isIntersect(potential_line, e):
+                not_intersect = False
         if potential_next[0] < 0 or potential_next[0] > self.world_size[0] or potential_next[1] < 0 or potential_next[1] > self.world_size[1]:
             not_hit_wall = False
-        if LineString([(self.x, self.y), potential_next]).intersects(MultiPolygon(obs_obstacles)):
-            not_hit_obst = False
-        while not (not_hit_wall and not_hit_obst):
+        cnt = 0
+        while not (not_intersect and not_hit_wall) and not stuck:
             delta_theta += pi/6 - (2 * pi if delta_theta > pi  else 0)
+            # print(self.x)
+            # print(self.y)
+            # print(delta_theta)
             potential_next = (self.x + 10 * cos(self.theta + delta_theta), self.y + 10 * sin(self.theta + delta_theta))
+            # print(potential_next)
+            potential_line = [(self.x, self.y), potential_next]
+            # print(potential_line)
+            intersect = False
+            not_hit_wall = False
+            # print("Edges\t", edges)
+            # print("P line\t", potential_line)
+            for e in edges:
+                if isIntersect(potential_line, e):
+                    intersect = True
+            if intersect:
+                cnt += 1
+            if cnt == 13:
+                # print("Stuck")
+                stuck = True
+                    # print("Intersect")
             if potential_next[0] > 0 and potential_next[0] < self.world_size[0] and potential_next[1] > 0 and potential_next[1] < self.world_size[1]:
                 not_hit_wall = True
-            if not LineString([(self.x, self.y), potential_next]).intersects(MultiPolygon(obs_obstacles)):
-                not_hit_obst = True
+        # not_hit_wall = True
+        # not_hit_obst = True
+        # if potential_next[0] < 0 or potential_next[0] > self.world_size[0] or potential_next[1] < 0 or potential_next[1] > self.world_size[1]:
+        #     not_hit_wall = False
+        # if LineString([(self.x, self.y), potential_next]).intersects(MultiPolygon(obs_obstacles)):
+        #     not_hit_obst = False
+        # while not (not_hit_wall and not_hit_obst):
+        #     delta_theta += pi/6 - (2 * pi if delta_theta > pi  else 0)
+        #     potential_next = (self.x + 10 * cos(self.theta + delta_theta), self.y + 10 * sin(self.theta + delta_theta))
+        #     if potential_next[0] > 0 and potential_next[0] < self.world_size[0] and potential_next[1] > 0 and potential_next[1] < self.world_size[1]:
+        #         not_hit_wall = True
+        #     if not LineString([(self.x, self.y), potential_next]).intersects(MultiPolygon(obs_obstacles)):
+        #         not_hit_obst = True
 
         return delta_theta
 
@@ -109,7 +157,7 @@ class Robot:
             other_landmarks = copy.copy(self.landmarks)
             other_landmarks.remove(landmark)
             # print(other_landmarks)
-            other_obstacles = self.get_obstacles(other_landmarks)
+            other_obstacles, other_edges = self.get_obstacles(other_landmarks)
             if not LineString([(self.x, self.y), landmark]).intersects(MultiPolygon(other_obstacles)):
 
                 r = sqrt(pow(landmark[0] - self.x, 2) + pow(landmark[1] - self.y, 2)) + gauss(0, sqrt(self.range_noise))
@@ -120,9 +168,9 @@ class Robot:
                 phi = atan2(landmark[1] - self.y, landmark[0] - self.x) - self.theta + gauss(0, sqrt(self.bearing_noise))
                 # phi = atan2(landmark[1] - self.y, landmark[0] - self.x) - self.theta
                 Z.append(phi)
-            else:
-                Z.append(-1)
-                Z.append(-1)
+            # else:
+            #     Z.append(-1)
+            #     Z.append(-1)
         # print(len(Z))
         return Z
     

@@ -27,7 +27,7 @@ def isIntersect(edge1, edge2):
 
     flag2 = cross(CD,CA) * cross(CD,CB)
 
-    if flag1<0 and flag2<0:
+    if flag1 < 0 and flag2 < 0:
         return True
     else:
         return False
