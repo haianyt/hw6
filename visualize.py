@@ -46,8 +46,8 @@ def draw_particles(particles, color_number, ax):
     # length of color array = 11 shades of blue
     color_array = ["#e6ecff", "#b3c6ff", "#809fff", "#4d79ff", "#1a53ff",
                    "#0039e6", "#002db3", "#002080", "#00134d", "#000d33", "#000000"]
-    # if color_number > 10:
-    #     color_number = 0
+    if color_number > 10:
+        color_number = 0
     for p in particles:
         ax.add_patch(patches.Circle((p.x, p.y), radius=1,
                                     color=color_array[color_number]))

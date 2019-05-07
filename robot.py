@@ -55,11 +55,12 @@ class Robot:
         for i in range(int(len(Z) / 2)):
             r = Z[2 * i]
             phi = Z[2 * i + 1]
-            theta_rad = phi + self.theta
-            # print(i+1)
-            obs_x = self.x + r * cos(theta_rad)
-            obs_y = self.y + r * sin(theta_rad)
-            obs_landmarks.append((obs_x, obs_y))
+            if r and phi:
+                theta_rad = phi + self.theta
+                # print(i+1)
+                obs_x = self.x + r * cos(theta_rad)
+                obs_y = self.y + r * sin(theta_rad)
+                obs_landmarks.append((obs_x, obs_y))
         # print(obs_landmarks)
         obs_obstacles, edges = self.get_obstacles(obs_landmarks)
 
@@ -168,9 +169,9 @@ class Robot:
                 phi = atan2(landmark[1] - self.y, landmark[0] - self.x) - self.theta + gauss(0, sqrt(self.bearing_noise))
                 # phi = atan2(landmark[1] - self.y, landmark[0] - self.x) - self.theta
                 Z.append(phi)
-            # else:
-            #     Z.append(-1)
-            #     Z.append(-1)
+            else:
+                Z.append(None)
+                Z.append(None)
         # print(len(Z))
         return Z
     
