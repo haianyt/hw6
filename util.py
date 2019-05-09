@@ -4,6 +4,21 @@ import numpy as np
 def cross(v1, v2):
     return v1[0] * v2[1] - v1[1] * v2[0]
 
+import time
+
+def timeit(f):
+
+    def timed(*args, **kw):
+
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+
+        print('func:%r took: %2.4f sec' % (f.__name__, te-ts))
+        return result
+
+    return timed
+
 
 def isIntersect(edge1, edge2):
     A = edge1[0]

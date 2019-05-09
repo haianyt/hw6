@@ -8,6 +8,7 @@ from math import sin, cos, sqrt, pow, pi, atan2
 from robot import *
 import numpy as np
 import scipy.stats
+import time
 
 
 def read_txt(filename):
@@ -44,10 +45,9 @@ def draw_bot(robot, ax):
 
 def draw_particles(particles, color_number, ax):
     # length of color array = 11 shades of blue
+    color_number = color_number%11
     color_array = ["#e6ecff", "#b3c6ff", "#809fff", "#4d79ff", "#1a53ff",
                    "#0039e6", "#002db3", "#002080", "#00134d", "#000d33", "#000000"]
-    if color_number > 10:
-        color_number = 0
     for p in particles:
         ax.add_patch(patches.Circle((p.x, p.y), radius=1,
                                     color=color_array[color_number]))
@@ -60,39 +60,61 @@ def init_particles(world_size, number, landmarks):
         particles.append(p)
     return particles
 
-def normalize(probs):
-    total = sum(probs)
-    return [p/total for p in probs]
+
 
 # TODO: Move robot, make observation, and move and resample all particles
+
 def update(robot, particles):
+    def normalize(probs):
+        total = sum(probs)
+        return [p/total for p in probs]
     Z = robot.sense()
     U = robot.move(Z)
-    for p in particles:
-        p.move_particle(*U)
+    # for p in particles:
+    #     p.set_noise(100*robot.forward_noise,robot.turn_noise,robot.range_noise,robot.bearing_noise)
+    #     p.move_particle(*U)
 
     # assign weight
     # weights = []
+    # range_norm = scipy.stats.norm(0,sqrt(robot.range_noise))
+    # bearing_norm = scipy.stats.norm(0,sqrt(robot.bearing_noise))
     # for p in particles:
     #     if not p.isValid():
     #         weights.append(0)
     #     else:
     #         exp = p.sense_exp()
-    #         weight = 100000
+    #         weight = 1.0
     #         for i in range(len(exp)//2):
     #             exp_r = exp[2 * i]
     #             exp_phi = exp[2 * i + 1]
     #             obs_r = Z[2 * i]
     #             obs_phi = Z[2 * i + 1]
-    #             if(obs_r==-1):
+    #             if(not obs_r):
     #                 continue
-    #             weight *= scipy.stats.norm(exp_r,robot.range_noise).pdf(obs_r)
-    #             weight *= scipy.stats.norm(exp_phi,robot.bearing_noise).pdf(obs_phi)
+    #             weight *= range_norm.pdf(abs(obs_r-exp_r))
+    #             weight *= bearing_norm.pdf(abs(obs_phi-exp_phi))
     #         weights.append(weight)
-    
+    # if max(weights)==0:
+    #     weights = []
+    #     for p in particles:
+    #         if not p.isValid():
+    #             weights.append(0)
+    #         else:
+    #             exp = p.sense_exp()
+    #             weight = 1.0
+    #             for i in range(len(exp)//2):
+    #                 exp_r = exp[2 * i]
+    #                 exp_phi = exp[2 * i + 1]
+    #                 obs_r = Z[2 * i]
+    #                 obs_phi = Z[2 * i + 1]
+    #                 if(not obs_r):
+    #                     continue
+    #                 weight *= scipy.stats.norm(exp_r,sqrt(robot.range_noise)).pdf(obs_r)
+    #                 weight *= scipy.stats.norm(exp_phi,sqrt(robot.bearing_noise)).pdf(obs_phi)
+    #             weights.append(weight)
     # weights = normalize(weights)
     # particles = np.random.choice(particles,len(particles),p=weights)
-    # particles = copy.deepcopy(particles)
+    # particles = [copy.deepcopy(p) for p in particles]
     return robot, particles
 
 
@@ -108,7 +130,8 @@ if __name__ == "__main__":
     ax.set_xlim([0, world_size[0]])
     ax.set_ylim([0, world_size[1]])
     draw_landmarks(landmarks, ax)
-    ax.axis('equal')
+    # ax.axis('equal')
+    ax.axis([0,250,0,250])
     plt.ion()
     plt.show()
 

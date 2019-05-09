@@ -40,9 +40,7 @@ class Robot:
             return False
         for o in self.landmarks:
             length = self.landmark_size/2
-            if o[0]-length<self.x<o[0]+length:
-                return False
-            if o[1]-length<self.y<o[1]+length:
+            if o[0]-length<self.x<o[0]+length and o[1]-length<self.y<o[1]+length:
                 return False
 
         return True
@@ -50,7 +48,7 @@ class Robot:
     # TODO: Moves a robot
     def move(self, Z):
         # delta_theta = random.random() * 2.0 * pi
-        delta_theta = gauss(0, sqrt(self.turn_noise))
+        delta_theta = 0
         obs_landmarks = []
         for i in range(int(len(Z) / 2)):
             r = Z[2 * i]
@@ -65,6 +63,7 @@ class Robot:
         obs_obstacles, edges = self.get_obstacles(obs_landmarks)
 
         delta_theta = self.detect_collision(delta_theta, obs_obstacles, edges)
+        delta_theta += gauss(0, sqrt(self.turn_noise))
         new_theta = self.theta + delta_theta
         delta_x = 10 * cos(new_theta)
         delta_y = 10 * sin(new_theta)
@@ -108,7 +107,7 @@ class Robot:
         for e in edges:
             if isIntersect(potential_line, e):
                 not_intersect = False
-        if potential_next[0] < 0 or potential_next[0] > self.world_size[0] or potential_next[1] < 0 or potential_next[1] > self.world_size[1]:
+        if potential_next[0] < 0+10 or potential_next[0] > self.world_size[0]-10 or potential_next[1] < 0+10 or potential_next[1] > self.world_size[1]-10:
             not_hit_wall = False
         cnt = 0
         while not (not_intersect and not_hit_wall) and not stuck:
@@ -127,13 +126,13 @@ class Robot:
             for e in edges:
                 if isIntersect(potential_line, e):
                     intersect = True
+                    # print("Intersect")
             if intersect:
                 cnt += 1
             if cnt == 13:
-                # print("Stuck")
+                print("Stuck")
                 stuck = True
-                    # print("Intersect")
-            if potential_next[0] > 0 and potential_next[0] < self.world_size[0] and potential_next[1] > 0 and potential_next[1] < self.world_size[1]:
+            if potential_next[0] > 0+10 and potential_next[0] < self.world_size[0]-10 and potential_next[1] > 0+10 and potential_next[1] < self.world_size[1]-10:
                 not_hit_wall = True
         # not_hit_wall = True
         # not_hit_obst = True
